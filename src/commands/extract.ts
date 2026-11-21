@@ -2,6 +2,12 @@ import { type Command, InvalidArgumentError, Option } from "commander";
 import { type ExtractDepth, extractCost } from "../core/cost.js";
 import { usageError } from "../core/errors.js";
 import { postWithPool } from "../core/runner.js";
+import {
+  EXTRACT_TIMEOUT_MAX_SEC,
+  EXTRACT_TIMEOUT_MIN_SEC,
+  EXTRACT_TIMEOUT_PLANNING_SEC,
+  SERVER_TIMEOUT_MARGIN_SEC,
+} from "../core/timeouts.js";
 import { finish } from "../ui/output.js";
 import { failureLines, printPages } from "../ui/render.js";
 import { jsonFlag, outputFlag, runtime } from "./runtime.js";
@@ -18,8 +24,14 @@ function parseChunks(raw: string): number {
 
 function parseTimeout(raw: string): number {
   const value = Number(raw);
-  if (!Number.isFinite(value) || value < 1 || value > 60) {
-    throw new InvalidArgumentError("expected a number between 1 and 60.");
+  if (
+    !Number.isFinite(value) ||
+    value < EXTRACT_TIMEOUT_MIN_SEC ||
+    value > EXTRACT_TIMEOUT_MAX_SEC
+  ) {
+    throw new InvalidArgumentError(
+      `expected a number between ${EXTRACT_TIMEOUT_MIN_SEC} and ${EXTRACT_TIMEOUT_MAX_SEC}.`,
+    );
   }
   return value;
 }
@@ -38,7 +50,10 @@ export function configure(cmd: Command): void {
     .addOption(new Option("--format <format>", "content format").choices(["markdown", "text"]))
     .addOption(new Option("--include-images", "include image URLs"))
     .addOption(
-      new Option("--timeout <seconds>", "server-side wait limit (1-60)").argParser(parseTimeout),
+      new Option(
+        "--timeout <seconds>",
+        `server-side wait limit (${EXTRACT_TIMEOUT_MIN_SEC}-${EXTRACT_TIMEOUT_MAX_SEC})`,
+      ).argParser(parseTimeout),
     )
     .addOption(new Option("-o, --output [file]", "write the full response to a file").preset(""));
 }
@@ -62,12 +77,13 @@ export async function run(
   if (typeof opts.extractDepth === "string") body.extract_depth = opts.extractDepth;
   if (typeof opts.format === "string") body.format = opts.format;
   if (opts.includeImages === true) body.include_images = true;
-  const serverTimeout = typeof opts.timeout === "number" ? opts.timeout : 30;
+  const serverTimeout =
+    typeof opts.timeout === "number" ? opts.timeout : EXTRACT_TIMEOUT_PLANNING_SEC;
   if (typeof opts.timeout === "number") body.timeout = opts.timeout;
 
   const response = await postWithPool(config, "extract", body, {
     estimate: extractCost(urls.length, depth),
-    timeoutSeconds: serverTimeout + 10,
+    timeoutSeconds: serverTimeout + SERVER_TIMEOUT_MARGIN_SEC,
   });
   finish(
     response.data,

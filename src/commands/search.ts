@@ -1,6 +1,7 @@
 import { type Command, InvalidArgumentError, Option } from "commander";
 import { type SearchDepth, searchCost } from "../core/cost.js";
 import { postWithPool } from "../core/runner.js";
+import { SEARCH_TIMEOUT_SEC } from "../core/timeouts.js";
 import { finish } from "../ui/output.js";
 import { printSearch } from "../ui/render.js";
 import { applySearchFlags, type SearchSpec, searchBody } from "./flags.js";
@@ -40,7 +41,7 @@ export async function run(
   const estimate = searchCost(depth);
   const response = await postWithPool(config, "search", body, {
     estimate,
-    timeoutSeconds: 60,
+    timeoutSeconds: SEARCH_TIMEOUT_SEC,
   });
   const maxChars = typeof opts.maxChars === "number" ? opts.maxChars : 600;
   finish(

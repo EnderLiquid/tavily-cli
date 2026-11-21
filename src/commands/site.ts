@@ -2,6 +2,12 @@ import { type Command, InvalidArgumentError, Option } from "commander";
 import { crawlCost, type ExtractDepth, mapCost } from "../core/cost.js";
 import { usageError } from "../core/errors.js";
 import { postWithPool } from "../core/runner.js";
+import {
+  SERVER_TIMEOUT_MARGIN_SEC,
+  SITE_TIMEOUT_DEFAULT_SEC,
+  SITE_TIMEOUT_MAX_SEC,
+  SITE_TIMEOUT_MIN_SEC,
+} from "../core/timeouts.js";
 import { saveCrawlPages } from "../ui/artifact.js";
 import { finish } from "../ui/output.js";
 import { failureLines, printMap, printPages, printPaths } from "../ui/render.js";
@@ -55,9 +61,10 @@ function addSiteOptions(cmd: Command): void {
     .addOption(new Option("--allow-external", "follow links to other domains"))
     .addOption(new Option("--no-external", "stay on the starting domain"))
     .addOption(
-      new Option("--timeout <seconds>", "server-side wait limit (10-150)").argParser(
-        parseNumber(10, 150),
-      ),
+      new Option(
+        "--timeout <seconds>",
+        `server-side wait limit (${SITE_TIMEOUT_MIN_SEC}-${SITE_TIMEOUT_MAX_SEC})`,
+      ).argParser(parseNumber(SITE_TIMEOUT_MIN_SEC, SITE_TIMEOUT_MAX_SEC)),
     )
     .addOption(new Option("-o, --output [file]", "write the full response to a file").preset(""));
 }
@@ -120,14 +127,14 @@ export async function runCrawl(
     typeof opts.extractDepth === "string" ? opts.extractDepth : "basic"
   ) as ExtractDepth;
   const body = { ...siteBody(url, opts), ...extractionBody(opts) };
-  const serverTimeout = typeof opts.timeout === "number" ? opts.timeout : 150;
+  const serverTimeout = typeof opts.timeout === "number" ? opts.timeout : SITE_TIMEOUT_DEFAULT_SEC;
   const outputDir = typeof opts.outputDir === "string" ? opts.outputDir : undefined;
   if (outputDir !== undefined && outputDir.trim() === "") {
     throw usageError("--output-dir must not be empty");
   }
   const response = await postWithPool(config, "crawl", body, {
     estimate: crawlCost(limit, typeof opts.instructions === "string", depth),
-    timeoutSeconds: serverTimeout + 10,
+    timeoutSeconds: serverTimeout + SERVER_TIMEOUT_MARGIN_SEC,
   });
   const saved = outputDir === undefined ? undefined : saveCrawlPages(response.data, outputDir);
   finish(
@@ -148,10 +155,10 @@ export async function runMap(
   const config = runtime(cmd);
   const limit = typeof opts.limit === "number" ? opts.limit : 50;
   const body = siteBody(url, opts);
-  const serverTimeout = typeof opts.timeout === "number" ? opts.timeout : 150;
+  const serverTimeout = typeof opts.timeout === "number" ? opts.timeout : SITE_TIMEOUT_DEFAULT_SEC;
   const response = await postWithPool(config, "map", body, {
     estimate: mapCost(limit, typeof opts.instructions === "string"),
-    timeoutSeconds: serverTimeout + 10,
+    timeoutSeconds: serverTimeout + SERVER_TIMEOUT_MARGIN_SEC,
   });
   finish(
     response.data,
