@@ -1,6 +1,6 @@
 # Tavily API 事实
 
-以下是设计所依赖的接口事实，来源为官方文档与实测，核对日期 2026-11-20。
+以下是设计所依赖的接口事实，来源为官方文档与实测，核对日期 2026-11-22。
 
 ## 基础
 
@@ -70,7 +70,7 @@
 | `/map` | 100 请求每分钟 |
 | `/usage` | 10 请求每 10 分钟 |
 
-限流按组织或账号计，同一账号下的多个 key 共享额度。429 响应可能带 `Retry-After`，值为秒。
+限流按组织或账号计，同一账号下的多个 key 共享额度。实测 429 分两类，均带 `Retry-After`，值为秒：应用层限流给出具体秒数，错误文本重复该值；网关拦截返回 60 秒，实际封锁可能更久。
 
 ## 状态码
 
@@ -94,5 +94,7 @@
 | `createTransport(options)` | 返回 `post`、`get`、`stream`，直接对应 REST 端点 |
 | `searchParameters` | search 的参数目录，含类型、取值范围与说明 |
 | `TavilyRequestError` | 带 `status` 与 `body`，用于分类故障 |
+
+`TavilyRequestError` 只保留 `status` 与 `body`，不暴露响应头，因此拿不到 `Retry-After`。`TavilyKeylessLimitError.retryAfter` 取自 keyless 响应体的 `retry_after_seconds`，与请求头无关。
 
 传输层支持 `apiKey`、`apiBaseURL`、`clientSource`、`timeoutSeconds`，以及代理环境变量。`createTransport` 不做自动重试。

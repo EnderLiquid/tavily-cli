@@ -18,6 +18,15 @@ import { drain, track } from "./queue.js";
 import { updateState } from "./state.js";
 import { backgroundSync } from "./sync.js";
 
+/**
+ * 429 后的 key 冷却时长。
+ *
+ * `@tavily/core` 在构造 `TavilyRequestError` 时只保留 `status` 与 `body`，响应头被丢弃，
+ * 因此读不到 `Retry-After`。应用层 429 的秒数也出现在错误文本里；网关拦截的秒数只在
+ * 响应头中，固定为 60 秒，且实际封锁可能更久。这里统一按 60 秒冷却，期间由号池换号。
+ */
+const RATE_LIMIT_COOLDOWN_SEC = 60;
+
 export interface PoolResponse {
   data: Record<string, unknown>;
   label: string;
@@ -85,7 +94,7 @@ export async function postWithPool(
         await markInvalid(config, entry, lastMessage);
       } else if (status === 429) {
         await refund(config, entry, options.estimate);
-        await coolDown(config, entry, 60);
+        await coolDown(config, entry, RATE_LIMIT_COOLDOWN_SEC);
       } else if (status === 432 || status === 433) {
         await penalize(config, entry, options.estimate);
         track(backgroundSync(config, entry, true));
