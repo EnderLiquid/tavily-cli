@@ -53,22 +53,38 @@ tavily-cli
 
 单次最多 20 个 URL，超出按参数错误处理。
 
-## crawl 与 map
+## crawl
 
 | 选项 | 说明 |
 |---|---|
 | `--max-depth <1-5>` | 深度，默认 1 |
 | `--max-breadth <n>` | 每层链接数，默认 20 |
-| `--limit <n>` | 页面或 URL 上限，默认 50 |
+| `--limit <n>` | 页面上限，默认 50 |
+| `--instructions <text>` | 自然语言引导 |
+| `--select-paths <csv>` / `--exclude-paths <csv>` | 路径正则 |
+| `--select-domains <csv>` / `--exclude-domains <csv>` | 域名正则 |
+| `--allow-external` / `--no-external` | 是否跟随站外链接 |
+| `--chunks-per-source <1-5>` | 每页片段数 |
+| `--extract-depth <basic\|advanced>` | 抽取深度 |
+| `--format <markdown\|text>` | 输出格式 |
+| `--include-images` | 附带图片地址 |
+| `--timeout <10-150>` | 服务端等待上限，秒 |
+| `-o, --output [file]` | 保存完整响应 |
+| `--output-dir <dir>` | 逐页保存为 `.md` 文件 |
+
+## map
+
+| 选项 | 说明 |
+|---|---|
+| `--max-depth <1-5>` | 深度，默认 1 |
+| `--max-breadth <n>` | 每层链接数，默认 20 |
+| `--limit <n>` | URL 上限，默认 50 |
 | `--instructions <text>` | 自然语言引导 |
 | `--select-paths <csv>` / `--exclude-paths <csv>` | 路径正则 |
 | `--select-domains <csv>` / `--exclude-domains <csv>` | 域名正则 |
 | `--allow-external` / `--no-external` | 是否跟随站外链接 |
 | `--timeout <10-150>` | 服务端等待上限，秒 |
 | `-o, --output [file]` | 保存完整响应 |
-| `--output-dir <dir>` | crawl 专用，逐页保存为 `.md` 文件 |
-
-`crawl` 另有 `--chunks-per-source`、`--extract-depth`、`--format`、`--include-images`。
 
 ## usage
 

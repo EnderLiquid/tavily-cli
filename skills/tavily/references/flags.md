@@ -40,22 +40,38 @@
 | `--timeout <1-60>` | 服务端等待上限，秒 |
 | `-o, --output [file]` | 保存完整响应 |
 
-## crawl 与 map
+## crawl
 
 | 选项 | 说明 |
 |---|---|
 | `--max-depth <1-5>` | 默认 1 |
 | `--max-breadth <n>` | 默认 20 |
-| `--limit <n>` | 默认 50 |
+| `--limit <n>` | 页面上限，默认 50 |
+| `--instructions <text>` | 自然语言引导，积分单价翻倍 |
+| `--select-paths` / `--exclude-paths <csv>` | 路径正则 |
+| `--select-domains` / `--exclude-domains <csv>` | 域名正则 |
+| `--allow-external` / `--no-external` | 是否跟随站外链接 |
+| `--chunks-per-source <1-5>` | 每页片段数 |
+| `--extract-depth <basic\|advanced>` | 抽取深度 |
+| `--format <markdown\|text>` | 输出格式 |
+| `--include-images` | 附带图片 |
+| `--timeout <10-150>` | 服务端等待上限，秒 |
+| `-o, --output [file]` | 保存完整响应，不改变 stdout |
+| `--output-dir <dir>` | 逐页保存为 `.md` |
+
+## map
+
+| 选项 | 说明 |
+|---|---|
+| `--max-depth <1-5>` | 默认 1 |
+| `--max-breadth <n>` | 默认 20 |
+| `--limit <n>` | URL 上限，默认 50 |
 | `--instructions <text>` | 自然语言引导，积分单价翻倍 |
 | `--select-paths` / `--exclude-paths <csv>` | 路径正则 |
 | `--select-domains` / `--exclude-domains <csv>` | 域名正则 |
 | `--allow-external` / `--no-external` | 是否跟随站外链接 |
 | `--timeout <10-150>` | 服务端等待上限，秒 |
 | `-o, --output [file]` | 保存完整响应，不改变 stdout |
-| `--output-dir <dir>` | crawl 专用，逐页保存为 `.md` |
-
-crawl 另有 `--chunks-per-source`、`--extract-depth`、`--format`、`--include-images`。
 
 `--json` 输出完整响应；`-o` 额外保存完整响应；`--output-dir` 把成功页面写入文件，文本模式下 stdout 输出保存路径。部分失败在文本模式汇总到 stderr，`--json` 下只出现在 `failed_results`。
 
