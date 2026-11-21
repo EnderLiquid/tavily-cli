@@ -18,26 +18,30 @@
 | `--topic <general\|news\|finance>` | 主题 |
 | `--time-range <year\|month\|week\|day>` | 时间范围，也接受 y、m、w、d |
 | `--start-date` / `--end-date <YYYY-MM-DD>` | 日期窗口 |
+| `--max-age-hours <n>` | 缓存副本最大年龄，小时；`0` 总是实时抓取，`-1` 从不实时抓取，`1-720` 只返回该时间内抓取的缓存；默认不限制 |
 | `--include-domains <csv>` / `--exclude-domains <csv>` | 域名过滤 |
+| `--include-domains-mode <restrict\|prefer>` | 默认 restrict；prefer 保留全网结果，仅提升所列域名 |
 | `--include-answer [basic\|advanced\|true\|false]` | 生成答案，省略值为 basic |
 | `--include-raw-content [markdown\|text\|false]` | 附带正文，省略值为 markdown |
 | `--include-images` | 附带图片 |
 | `--chunks-per-source <1-3>` | 每个来源的片段数 |
-| `--max-chars <n>` | 每条结果打印的字符数，默认 600，0 为全部 |
+| `--max-chars <n>` | 每条结果打印的字符数，默认 600，0 为片段全文 |
 | `-o, --output [file]` | 保存完整响应，裸 `-o` 写入 `.tavily/` |
 
-其余参数与 Tavily search API 同名，flag 为 kebab-case：`--auto-parameters`、`--max-age-hours`、`--exact-match`、`--safe-search`、`--country`、`--language`、`--filter-by-language`、`--include-favicon`、`--include-published-date`、`--filter-by-published-date`、`--fetch-timeout`、`--cache-fallback`、`--days`、`--include-image-descriptions`、`--include-domains-mode`。
+其余参数与 Tavily search API 同名，flag 为 kebab-case：`--auto-parameters`、`--exact-match`、`--safe-search`、`--country`、`--language`、`--filter-by-language`、`--include-favicon`、`--include-published-date`、`--filter-by-published-date`、`--fetch-timeout`、`--cache-fallback`、`--days`、`--include-image-descriptions`。
+
+`--max-age-hours` 用于持续更新的页面，例如天气和价格。`time_range` 按发布日期过滤，可能把这类页面漏掉，此时改用 `--max-age-hours`，两者也可以合用。API 接受 -1 到 720；低值不增加积分，但实时抓取会增加延迟；缓存太旧且无法实时抓取的条目会被丢弃，结果可能少于 `--max-results`。非付费计划在负载高时可能被 434 拒绝。
 
 ## extract
 
 | 选项 | 说明 |
 |---|---|
 | `--query <text>` | 按相关性重排片段 |
-| `--chunks-per-source <1-5>` | 每页片段数 |
+| `--chunks-per-source <1-5>` | 每页片段数，需配合 `--query` |
 | `--extract-depth <basic\|advanced>` | 抽取深度 |
 | `--format <markdown\|text>` | 输出格式 |
 | `--include-images` | 附带图片 |
-| `--timeout <1-60>` | 服务端等待上限，秒 |
+| `--timeout <1-60>` | 服务端等待上限，秒，默认 30 |
 | `-o, --output [file]` | 保存完整响应 |
 
 ## crawl
@@ -57,7 +61,7 @@
 | `--include-images` | 附带图片 |
 | `--timeout <10-150>` | 服务端等待上限，秒 |
 | `-o, --output [file]` | 保存完整响应，不改变 stdout |
-| `--output-dir <dir>` | 逐页保存为 `.md` |
+| `--output-dir <dir>` | 逐页保存为 `.md`，不写 `.gitignore` |
 
 ## map
 
@@ -73,7 +77,7 @@
 | `--timeout <10-150>` | 服务端等待上限，秒 |
 | `-o, --output [file]` | 保存完整响应，不改变 stdout |
 
-`--json` 输出完整响应；`-o` 额外保存完整响应；`--output-dir` 把成功页面写入文件，文本模式下 stdout 输出保存路径。部分失败在文本模式汇总到 stderr，`--json` 下只出现在 `failed_results`。
+`--json` 输出完整响应；`-o` 额外保存完整响应，裸 `-o` 落到 `.tavily/`；首次创建 `.tavily/` 时写入 `.gitignore`；`--output-dir` 把成功页面写入文件，文本模式下 stdout 输出保存路径，不写 `.gitignore`。部分失败在文本模式汇总到 stderr，`--json` 下只出现在 `failed_results`，退出码仍为 0。
 
 ## usage
 
@@ -97,7 +101,7 @@ tavily-cli keys remove <label>
 
 | 码 | 含义 |
 |---|---|
-| 0 | 成功 |
+| 0 | 成功；extract、crawl 部分页面失败仍为 0 |
 | 1 | 本地状态异常 |
 | 2 | 参数或配置错误 |
 | 3 | 额度或鉴权问题 |
