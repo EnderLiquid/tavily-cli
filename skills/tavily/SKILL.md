@@ -8,6 +8,8 @@ allowed-tools: Bash(tavily-cli *)
 
 # tavily-cli
 
+`tavily-cli` 是给 agent 用的 Tavily 命令行，内置多账号额度池。
+
 ## 选命令
 
 | 你有的 | 你需要的 | 用 |
@@ -60,7 +62,7 @@ tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --l
 - 站点结构未知时先 map，按返回的真实路径写 crawl 的 `--select-paths`；从 docs 或 blog 子域开始，depth 1，收紧 `--limit`。只有目标页埋得深时才加 `--max-depth`。
 - crawl 的成本随页数增长，始终显式设 `--limit`；默认 50 已经不小，从 `--max-depth 1 --limit 20` 起步，每加一层都会放大页数和时间。
 - `--instructions` 能按语义聚焦，但积分单价翻倍；先用具体栏目 URL 和 `--select-paths`，路径表达不了意图时再用。
-- 结果要进上下文时加 `--chunks-per-source`，不要整页灌入。
+- 结果要进上下文时，先加 `--instructions`，再用 `--chunks-per-source` 控制每页片段；不要整页灌入。
 - 每次检查 `failed_results`，把失败页用 `extract --extract-depth advanced` 单独重试，并告诉用户哪些页面没读到。
 - 只为回答问题时不要用 `--output-dir`；它用于保存站点副本。文本模式下 stdout 输出保存路径，失败页汇总在 stderr。
 
@@ -90,4 +92,4 @@ tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --l
 - 默认每条搜索结果打印 600 字符，`--max-chars 0` 打印匹配片段的全文，不是整页。
 - URL 一律加引号。读页面用 `extract`，不要用 curl 或 wget。
 
-完整参数见 [references/flags.md](references/flags.md)；与 `tavily-cli <command> --help` 不一致时以 `--help` 为准。
+完整参数见 [cli.md](references/cli.md)；与 `tavily-cli <command> --help` 不一致时以 `--help` 为准。
