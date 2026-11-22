@@ -18,7 +18,7 @@ description: 用本地 tavily-cli 完成联网检索：搜索、读取页面、�
 
 ## search
 
-检索时显式用 advanced 深度，一次取 10 条；简单查证可用 basic（advanced 每次 2 分，basic 1 分）：
+检索时显式用 advanced 深度，一次取 10 条；简单查证可用 basic：
 
 ```bash
 tavily-cli search 'Rust 2024 edition release notes' --depth advanced --max-results 10
@@ -43,9 +43,9 @@ tavily-cli extract 'https://example.com/report' 'https://example.com/summary'
 
 - 单次最多 20 个 URL，默认取整页。
 - 每次检查 `failed_results`，并在回答里说明哪些页面没读到。
-- `basic` 返回空、页面靠 JavaScript 渲染、或内容在表格与结构化数据里时，加 `--extract-depth advanced`（每 5 个成功 URL 2 分，basic 1 分）。
+- `basic` 返回空、页面靠 JavaScript 渲染、或内容在表格与结构化数据里时，加 `--extract-depth advanced`。
 - `--query` 只在长页面里定位一个事实时使用，配合 `--chunks-per-source`；片段在需要的位置被截断时去掉 `--query` 重取。
-- 慢页面加 `--timeout 60`。批量失败时只重试失败页，不要整批重跑 advanced。
+- 慢页面加 `--timeout 60`。批量抽取时只重试失败页。
 
 ## map 与 crawl
 
@@ -55,11 +55,10 @@ tavily-cli crawl 'https://docs.example.com' --select-paths '/guide/.*' --limit 2
 tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --limit 20
 ```
 
-- 只知道站点、不知道页面时，先 map，再 extract 命中的一两个 URL。这比 crawl 整站便宜。
-- 站点结构未知时先 map，按返回的真实路径写 crawl 的 `--select-paths`；从 docs 或 blog 子域开始，depth 1，收紧 `--limit`。只有目标页埋得深时才加 `--max-depth`。
-- crawl 的成本随页数增长，始终显式设 `--limit`；默认 50 已经不小，从 `--max-depth 1 --limit 20` 起步，每加一层都会放大页数和时间。
-- `--instructions` 能按语义聚焦，但积分单价翻倍；先用具体栏目 URL 和 `--select-paths`，路径表达不了意图时再用。
-- 结果要进上下文时，先加 `--instructions`，再用 `--chunks-per-source` 控制每页片段；不要整页灌入。
+- 只需要一两个页面、但不知道 URL 时，先用 `map` 找页面，再用 `extract` 读正文。
+- 抓取多页时，从 docs 或 blog 子域的目标栏目开始。站点结构未知时先用 `map`，按返回的真实路径设置 `--select-paths`。
+- `crawl` 始终显式设 `--limit`，从 `--max-depth 1 --limit 20` 起步；只有目标页埋得深时才加 `--max-depth`。
+- 优先用具体栏目 URL 和 `--select-paths` 收紧范围，需要按语义聚焦时再加 `--instructions`。要将多页内容放进上下文时，用 `--instructions` 配合 `--chunks-per-source` 控制每页的片段数。
 - 每次检查 `failed_results`，把失败页用 `extract --extract-depth advanced` 单独重试，并告诉用户哪些页面没读到。
 - 只为回答问题时不要用 `--output-dir`；它用于保存站点副本。文本模式下 stdout 输出保存路径，失败页汇总在 stderr。
 
@@ -71,12 +70,25 @@ tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --l
 
 ## 额度
 
-号池在多个账号之间轮换，正常使用时不需要关心。
+### 计费模型
 
-- 退出码 3 表示额度或鉴权问题，例如没有可用额度、没有可用 key 或 key 失效。运行 `tavily-cli usage` 查看，把结果如实告诉用户。
-- 只在遇到退出码 3 时查 `usage`，不要在每次检索前查。
-- `usage` 显示没有 key 时，让用户执行 `tavily-cli keys add <label>`，随后 `tavily-cli usage --sync`。新 key 不 sync 不会参与轮询。
-- 不要让用户把 key 贴在对话里；让用户自己在终端执行 `tavily-cli keys add <label>`，需要自动化时从 stdin 传入。
+| 接口 | 积分 |
+|---|---|
+| search basic、fast、ultra-fast | 每次 1 |
+| search advanced | 每次 2 |
+| extract basic | 每 5 个成功 URL 1 |
+| extract advanced | 每 5 个成功 URL 2 |
+| map | 每 10 个页面 1，带 `instructions` 时每 10 个页面 2 |
+| crawl | map 部分与 extract 部分之和 |
+
+免费额度每月 1000 分，按账号发放。同一账号下的多个 key 共享额度，`/usage` 的 `account` 段是账号级数据，`key` 段是单个 key 的数据。
+
+### 查询与恢复
+
+号池自动在可用账号之间轮换。
+
+- 检索时，只在遇到退出码 3（额度或鉴权问题）后运行 `tavily-cli usage`，查看号池状态并向用户说明结果。
+- `usage` 显示未配置 key 时，请用户在自己的终端通过标准输入（stdin）将 key 传给 `tavily-cli keys add <label>`，再运行 `tavily-cli usage --sync` 让新 key 参与轮询。不要在对话中索取 key。
 - `usage` 显示 `uncalibrated` 时，请用户执行一次 `tavily-cli usage --sync`。
 
 ## 输出
