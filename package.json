@@ -1,14 +1,15 @@
 {
   "name": "@enderliquid/tavily-cli",
   "version": "0.1.0",
-  "description": "Agent-oriented Tavily CLI with a multi-account credit pool",
+  "description": "面向 Agent 的 Tavily CLI，实现了多账号额度池",
   "license": "MIT",
   "type": "module",
   "bin": {
     "tavily-cli": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "skills"
   ],
   "engines": {
     "node": ">=20.1.0"
@@ -22,6 +23,11 @@
     "check": "biome check && tsc --noEmit && vitest run",
     "prepare": "tsup"
   },
+  "keywords": [
+    "tavily",
+    "web-search",
+    "cli"
+  ],
   "dependencies": {
     "@tavily/core": "^1.1.0",
     "commander": "^15.1.0",
