@@ -59,7 +59,7 @@ tavily-cli search 'Rust 2024 edition release notes' --depth advanced --max-resul
 | `--exact-match` | 关闭 | 只返回包含引号内精确短语的结果，忽略同义词和语义变体。查询里用引号包住目标短语。 |
 | `--fetch-timeout <n>` | 未公开 | 未公开参数，作用未知。 |
 | `--cache-fallback` | 未公开 | 未公开参数，作用未知。 |
-| `--max-chars <n>` | 600 | 文本模式下每条结果打印的字符数；0 打印匹配片段的全文，不是整页。 |
+| `--max-chars <n>` | 600 | 文本模式下每条结果的片段截取长度，单位为字符。`0` 输出完整片段；标题和 URL 照常输出。 |
 | `-o, --output [file]` | 不设 | 额外保存完整响应，不改变 stdout。裸 `-o` 落到 `.tavily/`。 |
 
 `--days`、`--fetch-timeout`、`--cache-fallback` 由 `@tavily/core` 透传，公开 API 参考没有独立说明，不要依赖其行为。
@@ -153,18 +153,18 @@ key 只在 `keys list` 中以 `tvly-…` 加末四位的掩码形式出现。`ad
 
 ## 输出
 
-stdout 只承载本次命令的主结果，stderr 承载进度、保存路径、重试、跳过原因和部分失败汇总。
+stdout 输出命令主结果，包括 `crawl --output-dir` 在文本模式下返回的文件路径。进度、`-o` 的保存提示、重试、跳过原因和文本模式下的失败汇总写 stderr。
 
 | 选项 | 主结果 | 落盘 |
 |---|---|---|
 | 默认 | 文本渲染 | 无 |
 | `--json` | 完整 API 响应 | 无 |
 | `-o [file]` | 不改变 stdout | 完整响应 JSON |
-| `--output-dir <dir>` | crawl 的文本结果改为保存路径，一行一个 | 每个成功页面一个 `.md` |
+| `--output-dir <dir>` | crawl 在文本模式下逐行输出保存路径 | 每个有正文的成功页面一个 `.md` |
 
 `--json` 与 `-o` 可以同时使用，此时 JSON 同时写 stdout 和文件。`--output-dir` 可与 `-o` 同时使用，完整响应仍写入 `-o` 指定的文件。`usage` 与 `keys list` 的 `--json` 输出自定义结构，不是 API 原始响应。
 
-裸 `-o` 落到 `.tavily/<command>-<slug>-<HHMMSS>-<rand>.json`；首次创建 `.tavily/` 时会写入一行 `*` 的 `.gitignore`。`crawl --output-dir` 不写 `.gitignore`。
+`-o` 省略文件名时，完整响应保存至 `.tavily/<command>-<slug>-<HHMMSS>-<rand>.json`。`-o` 创建 `.tavily/` 时会写入内容为一行 `*` 的 `.tavily/.gitignore`。`crawl --output-dir` 不写 `.gitignore`。
 
 `crawl --output-dir` 的文件名由 URL 的 host、pathname 和 search 生成，非法字符替换为 `_`，Windows 保留设备名加 `_` 前缀，过长名称截断并追加短哈希。同一批内重名按大小写不敏感处理，依次追加 `-2`、`-3`。目录不存在时递归创建，已有同名文件覆盖。没有 `raw_content` 的页面跳过，`failed_results` 不生成文件。
 

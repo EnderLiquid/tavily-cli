@@ -18,10 +18,7 @@ skills/tavily/
 ```yaml
 ---
 name: tavily
-description: |
-  用本地 tavily-cli 完成联网检索：搜索、读取页面、发现站点 URL、抓取站点内容。
-  任务需要训练数据之后的事实、新闻、来源或页面正文，或需要核实用户提供的说法时使用。
-allowed-tools: Bash(tavily-cli *)
+description: 用本地 tavily-cli 搜索网页、读取正文、发现站内链接和抓取多页内容。需要查最新信息、核实事实、找可引用的来源或读取指定网页时使用。
 ---
 ```
 
@@ -30,12 +27,12 @@ allowed-tools: Bash(tavily-cli *)
 | 小节 | 内容 |
 |---|---|
 | 选命令 | 四行对照：要事实用 search，有 URL 用 extract，找页面用 map，抓一节用 crawl |
-| search | 显式 advanced，简单查证可用 basic；查询写成搜索引擎能匹配的短语；独立检索分多个 Bash 调用；顺线索验证，候选从结果建；写报告按小节检索；生成答案只作摘要 |
-| extract | 单次不超过 20 个 URL，默认整页；`--query` 配合 chunks 定位长页面；空结果、脚本渲染或表格内容改 advanced；失败页只重试一次 |
-| map 与 crawl | 先 map 找单页或探路；crawl 用路径和 limit 收紧，从 depth 1、limit 20 起步；用 instructions 按语义聚焦，配合 chunks 控制片段数；失败页用 extract advanced 重试；部分失败退出 0；output-dir 只用于副本 |
-| 检索质量 | 两个独立来源一致即停；回答前补未确认或凭记忆的部分；官方发布、归属、数字与决定回官网或仓库确认 |
+| search | 一般用 advanced，简单查证可用 basic；按待核实要点拆查询，独立查询可并行；按线索验证，候选从结果建；写报告按小节检索；生成答案只作摘要 |
+| extract | 单次不超过 20 个 URL，默认抽取正文；`--query` 配合 `--chunks-per-source` 定位长页面；空结果、脚本渲染或表格内容可用 advanced；批量抽取只重试失败页 |
+| map 与 crawl | 先 map 找单页或探路；从具体栏目 URL 开始，用路径和 limit 收紧范围；从 depth 1、limit 20 起步；用 instructions 按语义聚焦，配合 chunks 控制片段数；失败页用 extract advanced 重试 |
+| 检索质量 | 一般事实用独立来源互证；发布、归属、官方数字和机构决定查一手资料；回答前补证并注明未核实内容 |
 | 额度 | 各命令的计费规则、账号共享额度；退出码 3 时查 usage，按状态指引用户添加 key 或同步额度 |
-| 输出 | stdout 是主结果；`--json` 输出完整响应且错误也写 stdout；`-o` 额外保存完整响应，首次创建 `.tavily/` 时写 `.gitignore`；`--output-dir` 不写；失败汇总写 stderr；`--max-chars 0` 是片段全文 |
+| 输出 | stdout 输出主结果；`--json` 输出完整响应或错误 JSON；两种保存方式与路径输出；部分失败的检查和说明；控制上下文长度与搜索片段长度 |
 
 `references/cli.md` 保存完整的命令、参数、输出契约与退出码表，每个参数都有默认值、范围、依赖或成本说明。SKILL.md 只保留决策性内容，细节按需查阅。
 

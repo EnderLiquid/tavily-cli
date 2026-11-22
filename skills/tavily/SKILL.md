@@ -1,6 +1,6 @@
 ---
 name: tavily
-description: 用本地 tavily-cli 完成联网检索：搜索、读取页面、发现站点 URL、抓取站点内容。任务需要训练数据之后的事实、新闻、来源或页面正文，或需要核实用户提供的说法时使用。
+description: 用本地 tavily-cli 搜索网页、读取正文、发现站内链接和抓取多页内容。需要查最新信息、核实事实、找可引用的来源或读取指定网页时使用。
 ---
 
 # tavily-cli
@@ -18,14 +18,14 @@ description: 用本地 tavily-cli 完成联网检索：搜索、读取页面、�
 
 ## search
 
-检索时显式用 advanced 深度，一次取 10 条；简单查证可用 basic：
+一般检索显式用 `--depth advanced`，最多请求 10 条结果；简单查证可用 `--depth basic`：
 
 ```bash
 tavily-cli search 'Rust 2024 edition release notes' --depth advanced --max-results 10
 ```
 
 - 查询写成搜索引擎能匹配的短语，不要照搬用户的整句话。
-- 一个问题拆成几次检索；互不依赖的检索在同一轮里分成多个 Bash 调用，一个调用只放一条命令，避免 `&`、`$(...)` 和循环。
+- 有多个待核实要点时，按要点拆分查询。独立查询可并行，每次 Bash 调用只运行一条检索命令。
 - 需要官方来源时用 `--include-domains`，默认是硬过滤，没有结果就去掉重试；想保留全网结果时加 `--include-domains-mode prefer`。
 - 最近的事件用 `--topic news --time-range week`，或 `--start-date` / `--end-date`。
 - 片段不够用时先 `extract` 那一两个页面，不要靠调大 `--max-results` 解决。
@@ -41,11 +41,10 @@ tavily-cli search 'Rust 2024 edition release notes' --depth advanced --max-resul
 tavily-cli extract 'https://example.com/report' 'https://example.com/summary'
 ```
 
-- 单次最多 20 个 URL，默认取整页。
-- 每次检查 `failed_results`，并在回答里说明哪些页面没读到。
-- `basic` 返回空、页面靠 JavaScript 渲染、或内容在表格与结构化数据里时，加 `--extract-depth advanced`。
-- `--query` 只在长页面里定位一个事实时使用，配合 `--chunks-per-source`；片段在需要的位置被截断时去掉 `--query` 重取。
-- 慢页面加 `--timeout 60`。批量抽取时只重试失败页。
+- 单次最多 20 个 URL，默认抽取页面正文。
+- `basic` 抽不到正文时，或遇到 JavaScript 渲染的页面、表格等结构化内容时，尝试 `--extract-depth advanced`。
+- 在长页面里定位具体事实时，用 `--query` 配合 `--chunks-per-source` 取相关片段。片段没覆盖所需内容时，去掉这两个选项重取正文。
+- 批量抽取时只重试失败页；页面超时可加 `--timeout 60`。
 
 ## map 与 crawl
 
@@ -56,17 +55,16 @@ tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --l
 ```
 
 - 只需要一两个页面、但不知道 URL 时，先用 `map` 找页面，再用 `extract` 读正文。
-- 抓取多页时，从 docs 或 blog 子域的目标栏目开始。站点结构未知时先用 `map`，按返回的真实路径设置 `--select-paths`。
-- `crawl` 始终显式设 `--limit`，从 `--max-depth 1 --limit 20` 起步；只有目标页埋得深时才加 `--max-depth`。
-- 优先用具体栏目 URL 和 `--select-paths` 收紧范围，需要按语义聚焦时再加 `--instructions`。要将多页内容放进上下文时，用 `--instructions` 配合 `--chunks-per-source` 控制每页的片段数。
-- 每次检查 `failed_results`，把失败页用 `extract --extract-depth advanced` 单独重试，并告诉用户哪些页面没读到。
-- 只为回答问题时不要用 `--output-dir`；它用于保存站点副本。文本模式下 stdout 输出保存路径，失败页汇总在 stderr。
+- 抓取多页时，从最具体的栏目 URL 开始，例如 docs 或 blog 子域下的目标栏目。站点结构未知时，先用 `map` 查找页面，再按返回的路径编写 `--select-paths` 正则。
+- `crawl` 始终显式设 `--limit`。从 `--max-depth 1 --limit 20` 起步，目标页在更深层时再调大 `--max-depth`。
+- 需要按语义聚焦或只需把相关片段放进上下文时，用 `--instructions` 指定关注内容；配合 `--chunks-per-source` 控制每页的片段数。
+- 失败页单独用 `extract --extract-depth advanced` 重试。
 
 ## 检索质量
 
-- 两个独立来源一致即可停；数独立来源，不数结果条数。
-- 回答前把草稿里未确认或凭记忆填的部分补一次定向检索。
-- 发布、归属、官方数字、具名机构的决定，回官网或仓库确认；二手站点或生成答案不够。
+- 一般事实有两个独立来源互相印证即可结束查证；同一原文的转载算一个来源。
+- 发布、归属、官方数字和机构决定，应查官网、公告或仓库等一手资料。
+- 回答前对存疑的要点做一次定向检索；仍查不到依据时，说明哪些内容尚未核实。
 
 ## 额度
 
@@ -93,12 +91,13 @@ tavily-cli crawl 'https://docs.example.com/guide' --output-dir .tavily/guide --l
 
 ## 输出
 
-- stdout 是本次命令的结果，诊断、保存路径和失败汇总写 stderr。
-- 检索命令需要结构化结果时加 `--json`，它会输出完整响应。`--json` 下的错误 JSON 写 stdout。
-- 结果很长时用 `-o .tavily/<name>.json` 额外保存完整响应，stdout 不变。首次创建 `.tavily/` 时会写入 `.gitignore`。保存后用 head、grep 或 node 读取需要的部分。
-- 要保存站点副本时用 `crawl --output-dir .tavily/<name>`，每个成功页面生成一个 `.md`。`--output-dir` 不写 `.gitignore`，需要时自行确认该目录已被忽略。
-- 文本模式下失败页会汇总到 stderr；`--json` 下检查 `failed_results`。extract 与 crawl 的部分失败退出码仍为 0。
-- 默认每条搜索结果打印 600 字符，`--max-chars 0` 打印匹配片段的全文，不是整页。
+- stdout 输出主结果；进度、重试提示和 `-o` 的保存提示写 stderr。
+- 检索命令加 `--json` 后，stdout 输出完整 API 响应；出错时输出错误 JSON。
+- `extract` 和 `crawl` 即使有失败页也可能以 0 退出。文本模式看 stderr 的失败汇总，`--json` 模式检查 `failed_results`。重试后仍未读到的页面，在回答中说明。
+- 用 `-o .tavily/<name>.json` 额外保存完整响应，stdout 不变。`-o` 创建 `.tavily/` 时会写入 `.tavily/.gitignore`。
+- 保存站点副本时用 `crawl --output-dir .tavily/<name>`，每个有正文的成功页面保存为一个 `.md`。文本模式下 stdout 逐行输出保存路径。按需将保存目录加入 Git 忽略规则。
+- 要控制上下文长度，先缩小请求范围，或将 stdout 重定向到文件后按需读取。
+- `search` 的文本模式默认将每条结果的片段截到 600 字符，标题和 URL 照常输出；`--max-chars 0` 输出完整片段。
 - URL 一律加引号。读页面用 `extract`，不要用 curl 或 wget。
 
 完整参数见 [cli.md](references/cli.md)；与 `tavily-cli <command> --help` 不一致时以 `--help` 为准。
